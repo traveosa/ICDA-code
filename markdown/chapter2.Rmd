@@ -1,0 +1,146 @@
+#Introduction to Categorical Data Analysis
+
+##Chapter 2: Contingency Tables
+
+###Table 2.1
+```{r table 2.1}
+library(htmlTable)
+x <- matrix(c(509, 116, 398, 104), nrow = 2, ncol = 2, byrow = TRUE)
+dimnames(x) <- list("Gender" = c("Females", "Males"), "Belief in Afterlife" = c("Yes", "No or Undecided"))
+htmlTable(x)
+```
+
+###Table 2.3 & Analysis
+```{r table 2.3}
+x <- matrix(c(189, 10845, 104, 10933), nrow = 2, ncol = 2, byrow = TRUE)
+dimnames(x) <- list("Group" = c("Placebo", "Aspirin"), "Myocardial Infarction" = c("Yes", "No"))
+htmlTable(x)
+prop.test(x, correct = FALSE)
+```
+As in the book, we can see that those in the aspirin group have a lesser prob.
+of a heart attack ($p_1-p_2>0$ which implies that the risk is higher for placebo)
+
+###Table 2.3 Risk and Odds Ratio Analysis
+```{r table 2.3 risk ratio}
+library(Epi)
+twoby2(x)
+```
+
+###Table 2.4 & Analysis
+```{r table 2.4}
+x <- matrix(c(172, 173, 90, 346), nrow = 2, ncol = 2, byrow = TRUE)
+dimnames(x) <- list("Ever Smoker" = c("Yes", "No"), "MI" = c("MI Cases", "Controls"))
+htmlTable(x)
+prop.table(x, 2) #given MI, prop that smoked
+twoby2(x)
+```
+Thus, we see that the odds of ever having been a smoker are four times higher
+for those who have had an MI vs those who have not.
+
+###Table 2.5: Chi-sq and Odds Ratio
+```{r table 2.5}
+x <- matrix(c(762, 327, 468, 484, 239, 477), nrow = 2, ncol = 3, byrow = TRUE)
+dimnames(x) <- list("Gender" = c("Females", "Males"), "Pol Party" = c("Dem", "Ind", "Rep"))
+htmlTable(x)
+test <- chisq.test(x, correct = FALSE)
+test
+htmlTable(round(test$stdres, 2))
+```
+From the results of the chi squared test, we see that political affiliation and
+gender are dependent. Furthermore, based on the standardized residuals, we see
+that males are disproportionatly more republican and females more democratic than
+what we would expect if the variables were truly independent.
+
+```{r table 2.5 odds ratio}
+x_dr <- x[,c(1,3)]
+twoby2(x_dr)
+```
+From the odds ratio above, females have 1.6x the odds of identifying democratic, compared
+to their male counterpart.
+
+###Table 2.5 Partitioning
+```{r table 2.5 parition}
+x1 <- x[,c(1,2)]
+htmlTable(x1)
+x1_test <- chisq.test(x1, correct = FALSE)
+x1_test
+x2 <- cbind(rowSums(x[,1:2]), x[,3])
+dimnames(x2) <- list("Gender" = c("Female", "Male"), "Pol Party" = c("Dem/Ind", "Rep"))
+htmlTable(x2)
+x2_test <- chisq.test(x2, correct = FALSE)
+x2_test
+x1_test$statistic + x2_test$statistic
+test$statistic
+```
+From partitioning above, we can see that when comparing democratic and independent,
+there is not evidence of dependence, but when these combined are compared to
+republican, we see a statistical difference. Finally, when adding the chi-sq
+statistics from the two partitioned tests, they are approximately equal to the
+overall test. Do note that if a $G^2$ test had been done (ie with `DescTools::GTest`),
+then the statistics would exactly sum to the omnibus test.
+
+###Table 2.7 Trend Test
+```{r table 2.7 trend}
+library(DescTools)
+x <- matrix(c(17066, 48, 14464, 38, 788, 5, 126, 1, 37, 1), nrow = 5, ncol = 2, byrow = TRUE)
+dimnames(x) <- list("Alcohol Consumption" = c("0", "<1", "1-2", "3-5", ">=6"),
+                    "Malformation" = c("Absent", "Present"))
+htmlTable(x)
+chisq.test(x, correct = FALSE)
+GTest(x, correct = "none")
+malformations <- c(48, 38, 5, 1, 1)
+totals <- c(17114, 14502, 793, 127, 38)
+prop.trend.test(x = malformations, n = totals, score = c(0, 0.5, 1.5, 4.0, 7))
+#alternatively: 
+prop.trend.test(x = x[,2], n = rowSums(x), score = c(0, 0.5, 1.5, 4.0, 7))
+```
+From the trend test above, we see that although the chi-sq $\chi^2$ and $G^2$ tests gave
+contradicting results (due to small sample size in some cells), we could make
+use of the ordinality of the alcohol consumption variable to see that as the
+number of drinks increase, so does the trend of having a birth defect.
+
+###Table 2.8 Fisher's Exact Test
+```{r table 2.8 fisher}
+x <- matrix(c(3, 1, 1, 3), nrow = 2, ncol = 2, byrow = TRUE)
+dimnames(x) <- list("Poured First" = c("Milk", "Tea"),
+                    "Guess Poured First" = c("Milk", "Tea"))
+htmlTable(x)
+fisher.test(x = x, alternative = "greater")
+```
+Unfortunately, it does not appear that his colleague was able to discern
+whether tea or milk was poured first. However, it is difficult to detect a
+difference with such a small sample size, even with tests for small sample
+sizes, such as the Fisher's Exact Test.
+
+###Table 2.10 and Conditional Odds Ratios
+```{r table 2.10}
+x <- array(c(53, 11, 414, 37, 0, 4, 16, 139), dim = c(2, 2, 2),
+           dimnames = list("Defendant's Race" = c("White", "Black"),
+                           "Death Penalty" = c("Yes", "No"),
+                           "Victim's Race" = c("White", "Black")))
+x
+apply(x, 3, twoby2)[[c(1, 2)]]
+```
+Above are the two conditional odds ratio output, controlling for the victim's race.
+We can see that, given the victim's race is white, the odds of a white defendant receiving the death
+penalty is 43% that of a black defendant. Furthermore, when the victim's race is
+black, we see that the odds of a white defendant being handed the death penalty
+is 0, because the death penalty was never given to a white defendant when the victim
+was black. Something of note is that the marginal odds ratio (collapsing over victim race)
+is 1.45 for whites, which implies that whites have higher odds of getting the
+death penalty (Simpson's Paradox).
+
+###Table 2.11 and Conditional Independence
+```{r table 2.11}
+x <- array(c(18, 12, 12, 8, 2, 8, 8, 32), dim = c(2, 2, 2),
+           dimnames = list("Treatment" = c("A", "B"),
+                           "Response" = c("Success", "Failure"),
+                           "Clinic" = c("1", "2")))
+x
+apply(x, 3, twoby2)[[c(1, 2)]]
+twoby2(x[,,1] + x[,,2])
+```
+We can see here that treatment and response variables are conditionally independent
+(have odds ratio of 1, controlling for clinic), but the marginal odds ratio is 2.
+The reason for this stems from the fact that the conditional odds of receiving
+treatment A are six times higher at clinic 1 than 2.
